@@ -1,36 +1,37 @@
 import argparse
-import time
-
-import requests
 import json
+import time
+import requests
+from packaging import version
 
 
 class ThunderStorePackage:
-    def __init__(self, namespace, name):
+    def __init__(self, namespace, name, previous_version):
         self.namespace = namespace
         self.name = name
-        self.version = None
+        self.updated_version = None
+        self.previous_version = previous_version
 
     def __repr__(self):
-        return f"ThunderStorePackage(namespace={self.namespace}, name={self.name}, version={self.version})"
+        return f"ThunderStorePackage(namespace={self.namespace}, name={self.name}, version={self.updated_version})"
 
 
 expected_package_list_file_name = "package_list.txt"
 updated_package_list_file_name = "updated_package_list.txt"
-longest_package_name = 0
+error_return_key_from_thunderstore = "ERROR"
 
 important_keys = ["Core", "Cosmetics", "Cosmos", "Extras"]
 
-core_map = {}
-cosmetics_map = {}
-cosmos_map = {}
-extras_map = {}
+core_list = []
+cosmetics_list = []
+cosmos_list = []
+extras_list = []
 
 sections = {
-    "Core": core_map,
-    "Cosmetics": cosmetics_map,
-    "Cosmos": cosmos_map,
-    "Extras": extras_map
+    "Core": core_list,
+    "Cosmetics": cosmetics_list,
+    "Cosmos": cosmos_list,
+    "Extras": extras_list
 }
 
 spaces_per_package_indent = 10
@@ -44,25 +45,22 @@ def parse_package_file(input_file_name=expected_package_list_file_name):
         populate_maps(data)
 
 
-def populate_map(map, packages):
-    global longest_package_name
+def populate_list(list, packages):
     for package in packages:
-        # get the namespace and package name and store its length
-        longest_package_name = len(package) if len(package) > longest_package_name else longest_package_name
         namespace, name, version = package.split("-")
-        if namespace not in map:
-            map[namespace] = []
-        map[namespace].append(
-            ThunderStorePackage(namespace.replace(" ", "").replace("\t", ""), name.replace(" ", "").replace("\t", "")))
+        list.append(
+            ThunderStorePackage(namespace.replace(" ", "").replace("\t", ""),
+                                name.replace(" ", "").replace("\t", ""),
+                                version))
 
 
 def populate_maps(data):
-    for key, map in sections.items():
+    for key, list in sections.items():
         start = data.find(key) + len(key)
         end = data.find("Cosmetics") if key == "Core" else data.find("Cosmos") if key == "Cosmetics" else data.find(
             "Extras") if key == "Cosmos" else None
         packages = data[start:end].replace('"', "").split(",") if end else data[start:].replace('"', "").split(",")
-        populate_map(map, packages)
+        populate_list(list, packages)
 
 
 def validate_important_keys_in_package_file(data):
@@ -80,52 +78,50 @@ def get_thunderstore_package_latest_version(namespace, name):
     return "ERROR - namespace / package name doesn't exist?"
 
 
-def update_all_packages(server_delay=1):
-    for section_key, section_map in sections.items():
+def update_package_version(package, server_delay):
+    package.version = get_thunderstore_package_latest_version(package.namespace, package.name)
+    time.sleep(server_delay)
+
+
+def print_package_update_status(package):
+    if error_return_key_from_thunderstore not in package.version:
+        package_info = f"{package.namespace}-{package.name}"
+        if version.parse(package.version) > version.parse(package.previous_version):
+            # print updated message
+            print(f"{package_info:<40} - ✅ Updated! - {package.previous_version} -> {package.version}")
+        else:
+            # print not updated message
+            print(f"{package_info:<40} - {package.name} - {package.version}")
+    else:
+        # print error message
+        print(f"{package.namespace} - {package.name} - ❌ Error: {package.version}")
+
+
+def update_all_packages(server_delay=0):
+    for section_key, section_list in sections.items():
         print(f"Updating packages in section: {section_key}")
-        for packages in section_map.values():
-            for package in packages:
-                # align the output
-                package_info = f"{package.namespace}-{package.name}".ljust(longest_package_name + 2)
-                print(package_info, end="")
-                package.version = get_thunderstore_package_latest_version(package.namespace, package.name)
-                print("{}".format(
-                    f"✅ - {package.version}" if "ERROR" not in package.version else f"❌ - {package.version}",
-                    end="\n"))
-                # add delay to not spam the server
-                time.sleep(server_delay)
+        for package in section_list:
+            update_package_version(package, server_delay)
+            print_package_update_status(package)
 
 
 def write_packages_to_file(output_file_name=updated_package_list_file_name):
     with open(output_file_name, "w") as file:
-        for key, map in sections.items():
-            length_of_map = calculate_total_items_in_map(map)
-            write_count = 0
+        for key, list in sections.items():
             file.write(key + "\n")
-            for namespace, packages in map.items():
-                for package in packages:
-                    write_count += 1
-                    # if there is a single item in the package
-                    line = "{}{}{}".format(" " * spaces_per_package_indent,
-                                           f'"{package.namespace}-{package.name}-{package.version}"',
-                                           "," if write_count != length_of_map else "")
-                    file.write(line + "\n")
+            for package in list:
+                line = "{}{}{}".format(" " * spaces_per_package_indent,
+                                       f'"{package.namespace}-{package.name}-{package.version}"',
+                                       "," if package != list[-1] else "")
+                file.write(line + "\n")
             file.write("\n\n")
     file.close()
     print(f"Updated package list written to file: {output_file_name}")
 
 
-def calculate_total_items_in_map(map):
-    total = 0
-    for key, value in map.items():
-        if len(value) > 0:
-            total += len(value)
-    return total
-
-
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Update packages.')
-    parser.add_argument('--server_delay', type=int, default=1,
+    parser.add_argument('--server_delay', type=int, default=0,
                         help='Delay between server requests in seconds')
     parser.add_argument('--output_file_name', type=str, default='updated_package_list.txt',
                         help='Name of the output file')
