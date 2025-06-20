@@ -1,14 +1,13 @@
 # Thunderstore package updator
 
 ## Purpose of this script
-This script is used to obtain the latest versions of a Thunderstore package list your povide. 
-It will automatically update the version number in the `packagelist.txt` file you provide and create a new packagelist_updated.txt file with the updated versions from Thunderstore.
+This script obtains the latest versions of a Thunderstore package list you provide.
+It will automatically update the version numbers directly in `package_list.txt`.
 
 ## How to use example
 
 ### arguments
-- `--input_file` default `package_list.txt` : The file that must exist in the same directory as the script. This file should contain the list of packages you want to update.
-- `--output_file` default `package_list_updated.txt` : The file that will be created with the updated versions of the packages.
+- `--input_file` default `package_list.txt` : The file that must exist in the same directory as the script. This file will be overwritten with the updated versions of the packages.
 - `--server_delay` default `1` : The delay between each request to the Thunderstore server. This is to prevent the server from blocking you for making too many requests in a short period of time. Not sure what the limit is, but I would recommend not going below 1 second.
 
 ## Image of the script running
