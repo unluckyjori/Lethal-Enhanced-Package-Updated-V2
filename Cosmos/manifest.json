@@ -1,0 +1,30 @@
+{
+    "name": "Lethal_Enhanced_Party_Edition_COSMOS",
+    "version_number": "10.0.4",
+    "website_url": "https://discord.gg/T8kKndBhS5",
+    "description": "This mod is meant to be used with Lethal Enhanced Party Edition.",
+    "dependencies": [
+        "Magic_Wesley-Wesleys_Moons-3.1.10",
+        "Zingar-Atlas_Abyss-1.1.8",
+        "skidz-PoolRooms-0.1.20",
+        "Tolian-EchoReach-0.5.6",
+        "Tolian-Celestria-0.7.2",
+        "Tolian-Maritopia-0.6.9",
+        "Tolian-PsychSanctum-0.5.3",
+        "Tolian-Harloth-0.2.6",
+        "Tolian-Zenit-0.3.9",
+        "Tolian-Nimbus-0.1.6",
+        "Tolian-Azure-0.2.1",
+        "Tolian-Spectralis-0.2.1",
+        "Tolian-Crystallum-0.2.4",
+        "Tolian-Echelon-0.1.9",
+        "Dantor-Dantors_Mental_Hospital-1.2.2",
+        "AudioKnight-StarlancerMoons-1.6.1",
+        "Major_And_Skiz-MoreInteriors-2.5.0",
+        "scoopy-Scoopys_Variety_Mod-1.2.0",
+        "Piggy-LC_Office-1.1.28",
+        "sfDesat-Celest-1.1.2",
+        "RosiePies-Sector0_Interior-1.1.4",
+        "LethalMatt-Bozoros-1.0.1"
+    ]
+}

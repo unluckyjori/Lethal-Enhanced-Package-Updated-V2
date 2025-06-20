@@ -1,0 +1,14 @@
+{
+    "name": "Lethal_Enhanced_Party_Edition_COSMETICS",
+    "version_number": "10.0.4",
+    "website_url": "https://discord.gg/T8kKndBhS5",
+    "description": "This mod is meant to be used with Lethal Enhanced Party Edition.",
+    "dependencies": [
+        "Shinobi-MCC-1.0.0",
+        "404_Dom-Doms_Basic_Suit_Colors-1.4.4",
+        "FoxGod-ThiccCompanyModelReplacement-2.0.1",
+        "x753-More_Suits-1.4.3",
+        "Verity-TooManySuits-1.0.9",
+        "RT0405-TooManySuitsInWorldButtons-1.0.3"
+    ]
+}
