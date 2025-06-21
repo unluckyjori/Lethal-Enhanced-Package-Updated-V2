@@ -241,10 +241,7 @@ def zip_folders(output_dir: str = "packages") -> List[str]:
 def upload_packages(token: str, packages_dir: str = "packages") -> None:
     settings = load_settings()
     folder_to_section = {v: k for k, v in SECTION_TO_FOLDER.items()}
-    headers = {
-        "Authorization": f"Bearer {token}",
-    }
-    upload_url = (
+    submit_url = (
         "https://thunderstore.io/api/experimental/submission/submit-async/"
     )
     for name in os.listdir(packages_dir):
@@ -259,22 +256,38 @@ def upload_packages(token: str, packages_dir: str = "packages") -> None:
             "has_nsfw_content": False,
             "upload_uuid": str(uuid.uuid4()),
         }
-        with open(path, "rb") as f:
-            files = {
-                "data": ("metadata.json", json.dumps(metadata), "application/json"),
-                "file": (name, f, "application/zip"),
-            }
-            response = requests.post(upload_url, headers=headers, files=files)
-        if response.status_code != 200:
-            print(f"Failed to upload {name}: {response.text}")
+
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        }
+        submit_resp = requests.post(submit_url, headers=headers, json=metadata)
+        if submit_resp.status_code != 200:
+            print(f"Failed to submit metadata for {name}: {submit_resp.text}")
             continue
-        submission_id = response.json().get("submission_id")
+        submission_id = submit_resp.json().get("submission_id")
         if not submission_id:
             print(f"No submission id for {name}")
             continue
+
+        upload_url = (
+            f"https://thunderstore.io/api/experimental/submission/upload/{submission_id}/"
+        )
+        with open(path, "rb") as f:
+            data = f.read()
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/zip",
+        }
+        upload_resp = requests.post(upload_url, headers=headers, data=data)
+        if upload_resp.status_code != 200:
+            print(f"Failed to upload {name}: {upload_resp.text}")
+            continue
+
         poll_url = (
             f"https://thunderstore.io/api/experimental/submission/poll-async/{submission_id}/"
         )
+        headers = {"Authorization": f"Bearer {token}"}
         while True:
             poll_resp = requests.get(poll_url, headers=headers)
             if poll_resp.status_code != 200:
