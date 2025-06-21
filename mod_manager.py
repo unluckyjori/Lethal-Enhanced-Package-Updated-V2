@@ -377,12 +377,31 @@ def upload_packages(token: str, packages_dir: str = "packages") -> None:
             continue
 
         path = os.path.join(packages_dir, name)
+
+        with zipfile.ZipFile(path, "r") as zf:
+            with zf.open("manifest.json") as mf:
+                manifest = json.load(mf)
+            try:
+                with zf.open("README.md") as rf:
+                    readme = rf.read().decode("utf-8")
+            except KeyError:
+                readme = manifest.get("description", "")
+
+        summary = readme.splitlines()[0] if readme else manifest.get("description", "")
+
         metadata = {
             "upload_uuid": str(uuid.uuid4()),
             "author_name": "lethal_coder",
-            "categories": ["Modpacks"],
-            "communities": ["Lethal Company"],
+            "communities": ["lethal-company"],
+            "community_categories": {"lethal-company": ["modpacks"]},
             "has_nsfw_content": False,
+            "package_name": manifest.get("name"),
+            "version_number": manifest.get("version_number"),
+            "platform": "windows",
+            "package_type": "modpack",
+            "package_summary": summary,
+            "package_description": readme,
+            "license": "MIT",
         }
 
         meta_headers = {
