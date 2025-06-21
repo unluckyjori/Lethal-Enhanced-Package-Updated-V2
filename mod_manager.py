@@ -7,6 +7,7 @@ import uuid
 import zipfile
 import hashlib
 import base64
+import re
 from typing import Dict, List, Optional
 
 import requests
@@ -19,6 +20,7 @@ SECTION_TO_FOLDER = {
     "Cosmetics": "cosmetic",
     "Cosmos": "cosmos",
     "Extras": "extra",
+    "Main": "main",
 }
 
 SECTION_ALIASES = {k.lower(): k for k in SECTION_TO_FOLDER}
@@ -158,6 +160,8 @@ def parse_updated_package_list(path=PACKAGE_LIST_FILE):
 
 def update_dependencies(section_packages):
     for section, packages in section_packages.items():
+        if section.lower() == "main":
+            continue
         folder = SECTION_TO_FOLDER.get(section)
         if not folder:
             continue
@@ -348,10 +352,48 @@ def update_manifest_versions(new_version: str) -> None:
             continue
         with open(manifest_path, "r") as mf:
             data = json.load(mf)
+
         data["version_number"] = new_version
+
+        deps = data.get("dependencies", [])
+        new_deps = []
+        for dep in deps:
+            if dep.lower().startswith(
+                "lethal_coder-lethal_enhanced_party_edition"
+            ):
+                prefix, _ = dep.rsplit("-", 1)
+                new_deps.append(f"{prefix}-{new_version}")
+            else:
+                new_deps.append(dep)
+        data["dependencies"] = new_deps
+
         with open(manifest_path, "w") as mf:
             json.dump(data, mf, indent=4)
             mf.write("\n")
+
+
+def update_main_mod_count(mod_count: int) -> None:
+    folder = SECTION_TO_FOLDER.get("Main")
+    if not folder:
+        return
+    manifest_path = os.path.join(folder, "manifest.json")
+    if os.path.isfile(manifest_path):
+        with open(manifest_path, "r") as mf:
+            data = json.load(mf)
+        desc = data.get("description", "")
+        desc = re.sub(r"\b227\b", str(mod_count), desc)
+        data["description"] = desc
+        with open(manifest_path, "w") as mf:
+            json.dump(data, mf, indent=4)
+            mf.write("\n")
+
+    readme_path = os.path.join(folder, "README.md")
+    if os.path.isfile(readme_path):
+        with open(readme_path, "r") as rf:
+            text = rf.read()
+        text = text.replace("over 227", f"over {mod_count}")
+        with open(readme_path, "w") as rf:
+            rf.write(text)
 
 
 def zip_folders(output_dir: str = "packages") -> List[str]:
@@ -475,6 +517,16 @@ def run_upload():
         print("No version provided.\n")
         return
     update_manifest_versions(new_version)
+
+    mod_count_str = input("Enter total mod count: ").strip()
+    print()
+    try:
+        mod_count = int(mod_count_str)
+    except ValueError:
+        print("Invalid mod count.\n")
+        return
+    update_main_mod_count(mod_count)
+
     zip_folders()
     settings = load_settings()
     token = settings.get("token") or os.environ.get("THUNDERSTORE_TOKEN")
@@ -501,6 +553,16 @@ def run_all():
         print("No version provided.\n")
         return
     update_manifest_versions(new_version)
+
+    mod_count_str = input("Enter total mod count: ").strip()
+    print()
+    try:
+        mod_count = int(mod_count_str)
+    except ValueError:
+        print("Invalid mod count.\n")
+        return
+    update_main_mod_count(mod_count)
+
     zip_folders()
     settings = load_settings()
     token = settings.get("token") or os.environ.get("THUNDERSTORE_TOKEN")
