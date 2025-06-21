@@ -378,21 +378,21 @@ def update_main_mod_count(mod_count: int) -> None:
         return
     manifest_path = os.path.join(folder, "manifest.json")
     if os.path.isfile(manifest_path):
-        with open(manifest_path, "r") as mf:
+        with open(manifest_path, "r", encoding="utf-8") as mf:
             data = json.load(mf)
         desc = data.get("description", "")
         desc = re.sub(r"\b227\b", str(mod_count), desc)
         data["description"] = desc
-        with open(manifest_path, "w") as mf:
+        with open(manifest_path, "w", encoding="utf-8") as mf:
             json.dump(data, mf, indent=4)
             mf.write("\n")
 
     readme_path = os.path.join(folder, "README.md")
     if os.path.isfile(readme_path):
-        with open(readme_path, "r") as rf:
+        with open(readme_path, "r", encoding="utf-8") as rf:
             text = rf.read()
         text = text.replace("over 227", f"over {mod_count}")
-        with open(readme_path, "w") as rf:
+        with open(readme_path, "w", encoding="utf-8") as rf:
             rf.write(text)
 
 
