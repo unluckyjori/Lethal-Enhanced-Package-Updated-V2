@@ -188,6 +188,7 @@ def add_mod() -> None:
     mod_str = input(
         "Enter full mod string (e.g. ScienceBird-Universal_Radar-1.0.6): "
     ).strip()
+    mod_str = mod_str.strip().strip('"')
     if not mod_str:
         print("No mod provided.\n")
         return
@@ -221,6 +222,67 @@ def add_mod() -> None:
             json.dump(data, mf, indent=4)
             mf.write("\n")
         print(f"Added {mod_str} to {manifest_path}\n")
+    else:
+        print(f"Manifest not found for section {section}.\n")
+
+
+def remove_mod() -> None:
+    mod_str = input(
+        "Enter full mod string (e.g. ScienceBird-Universal_Radar-1.0.6): "
+    ).strip()
+    mod_str = mod_str.strip().strip('"')
+    if not mod_str:
+        print("No mod provided.\n")
+        return
+    section_input = input(
+        "Section (core/cosmos/cosmetic/extra): "
+    ).strip().lower()
+    section = SECTION_ALIASES.get(section_input)
+    if not section:
+        print("Invalid section.\n")
+        return
+
+    pkg_obj = parse_mod_string(mod_str)
+    if pkg_obj is None:
+        print("Invalid mod string format.\n")
+        return
+
+    sections_map = parse_package_list_for_update(PACKAGE_LIST_FILE)
+    packages = sections_map.get(section, [])
+    new_packages = [
+        p for p in packages
+        if not (
+            p.namespace == pkg_obj.namespace
+            and p.name == pkg_obj.name
+            and p.version == pkg_obj.version
+        )
+    ]
+    if len(new_packages) == len(packages):
+        print("Mod not found in package list.\n")
+        return
+
+    sections_map[section] = new_packages
+    write_packages_to_file(sections_map, PACKAGE_LIST_FILE)
+
+    folder = SECTION_TO_FOLDER.get(section)
+    manifest_path = os.path.join(folder, "manifest.json")
+    if os.path.isfile(manifest_path):
+        with open(manifest_path, "r") as mf:
+            data = json.load(mf)
+        deps = data.get("dependencies", [])
+        new_deps = []
+        removed = False
+        for dep in deps:
+            if dep.strip().strip('"') == mod_str:
+                removed = True
+                continue
+            new_deps.append(dep)
+        if removed:
+            data["dependencies"] = new_deps
+            with open(manifest_path, "w") as mf:
+                json.dump(data, mf, indent=4)
+                mf.write("\n")
+            print(f"Removed {mod_str} from {manifest_path}\n")
     else:
         print(f"Manifest not found for section {section}.\n")
 
@@ -424,10 +486,11 @@ def menu():
         "1: Update mods\n"
         "2: Distribute\n"
         "3: Add mod\n"
-        "4: Upload\n"
-        "5: Settings\n"
-        "6: All\n"
-        "7: Exit\n\n"
+        "4: Remove mod\n"
+        "5: Upload\n"
+        "6: Settings\n"
+        "7: All\n"
+        "8: Exit\n\n"
     )
     while True:
         choice = input(prompt).strip()
@@ -439,12 +502,14 @@ def menu():
         elif choice == "3":
             add_mod()
         elif choice == "4":
-            run_upload()
+            remove_mod()
         elif choice == "5":
-            settings_menu()
+            run_upload()
         elif choice == "6":
-            run_all()
+            settings_menu()
         elif choice == "7":
+            run_all()
+        elif choice == "8":
             print("Exiting...")
             break
         else:
