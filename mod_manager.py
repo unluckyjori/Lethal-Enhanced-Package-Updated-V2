@@ -370,7 +370,7 @@ def zip_folders(output_dir: str = "packages") -> List[str]:
 
 
 def upload_packages(token: str, packages_dir: str = "packages") -> None:
-    meta_url = "https://thunderstore.io/api/experimental/submission/submit/"
+    meta_url = "https://thunderstore.io/api/experimental/submission/submit-async/"
 
     for name in os.listdir(packages_dir):
         if not name.lower().endswith(".zip"):
@@ -447,13 +447,14 @@ def upload_packages(token: str, packages_dir: str = "packages") -> None:
         }
 
         meta_resp = requests.post(meta_url, headers=headers, json=metadata)
-        if meta_resp.status_code != 200:
+        if not meta_resp.ok:
             print(f"Failed to submit metadata for {name}: {meta_resp.text}")
             continue
 
-        submission_id = meta_resp.json().get("submission_id")
+        meta_data = meta_resp.json()
+        submission_id = meta_data.get("submission_id")
         if not submission_id:
-            print(f"No submission id for {name}")
+            print(f"Missing submission_id for {name}")
             continue
 
         poll_headers = {"Authorization": f"Bearer {token}"}
