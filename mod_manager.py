@@ -354,25 +354,24 @@ def replace_version(dep: str, new_version: str) -> str:
 
 
 def update_manifest_versions(new_version: str) -> None:
-    for folder in SECTION_TO_FOLDER.values():
+    """Update manifest version numbers for each section."""
+    for section, folder in SECTION_TO_FOLDER.items():
         manifest_path = os.path.join(folder, "manifest.json")
         if not os.path.isfile(manifest_path):
             continue
-        with open(manifest_path, "r") as mf:
+
+        with open(manifest_path, "r", encoding="utf-8") as mf:
             data = json.load(mf)
 
         data["version_number"] = new_version
 
-        deps = data.get("dependencies", [])
-        new_deps = []
-        for dep in deps:
-            if "lethal_enhanced_party_edition" in dep.lower():
-                new_deps.append(replace_version(dep, new_version))
-            else:
-                new_deps.append(dep)
-        data["dependencies"] = new_deps
+        if section == "Main":
+            deps = data.get("dependencies", [])
+            data["dependencies"] = [
+                replace_version(dep, new_version) for dep in deps
+            ]
 
-        with open(manifest_path, "w") as mf:
+        with open(manifest_path, "w", encoding="utf-8") as mf:
             json.dump(data, mf, indent=4)
             mf.write("\n")
 
