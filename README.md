@@ -8,7 +8,7 @@ It will automatically update the version numbers directly in `package_list.txt`.
 
 ### arguments
 - `--input_file` default `package_list.txt` : The file that must exist in the same directory as the script. This file will be overwritten with the updated versions of the packages.
-- `--server_delay` default `1` : The delay between each request to the Thunderstore server. This is to prevent the server from blocking you for making too many requests in a short period of time. Not sure what the limit is, but I would recommend not going below 1 second.
+- `--server_delay` default `1` : The delay between each request to the Thunderstore server. This can also be configured through the **Settings** menu. It prevents the server from blocking you for making too many requests in a short period of time. Not sure what the limit is, but I would recommend not going below 1 second.
 
 ## Image of the script running
 ![image](img.png)
