@@ -370,7 +370,7 @@ def zip_folders(output_dir: str = "packages") -> List[str]:
 
 
 def upload_packages(token: str, packages_dir: str = "packages") -> None:
-    meta_url = "https://thunderstore.io/api/experimental/submission/submit-async/"
+    meta_url = "https://thunderstore.io/api/experimental/submission/submit/"
 
     for name in os.listdir(packages_dir):
         if not name.lower().endswith(".zip"):
@@ -405,6 +405,7 @@ def upload_packages(token: str, packages_dir: str = "packages") -> None:
         upload_urls = init_data.get("upload_urls") or user_media.get("upload_urls", [])
         parts = []
 
+        success = True
         with open(path, "rb") as fh:
             for part in upload_urls:
                 part_num = part.get("part_number")
@@ -419,16 +420,25 @@ def upload_packages(token: str, packages_dir: str = "packages") -> None:
                 put_headers = {"Content-MD5": md5}
                 resp = requests.put(url, headers=put_headers, data=data)
                 etag = resp.headers.get("ETag")
-                if resp.status_code >= 300 or not etag:
+                if resp.status_code // 100 != 2 or not etag:
                     print(f"Failed to upload part {part_num} for {name}: {resp.text}")
+                    success = False
                     break
                 parts.append({"ETag": etag, "PartNumber": part_num})
+        if not success:
+            continue
 
         finish_url = f"https://thunderstore.io/api/experimental/usermedia/{file_uuid}/finish-upload/"
         finish_payload = {"parts": parts}
         finish_resp = requests.post(finish_url, headers=headers, json=finish_payload)
-        if finish_resp.status_code != 200:
+        try:
+            finish_resp.raise_for_status()
+        except requests.HTTPError:
             print(f"Failed to finalize upload for {name}: {finish_resp.text}")
+            continue
+        finish_data = finish_resp.json()
+        if finish_data.get("status") != "upload_complete":
+            print(f"Upload incomplete for {name}: {finish_data}")
             continue
 
         metadata = {
@@ -447,30 +457,15 @@ def upload_packages(token: str, packages_dir: str = "packages") -> None:
         }
 
         meta_resp = requests.post(meta_url, headers=headers, json=metadata)
-        if not meta_resp.ok:
-            print(f"Failed to submit metadata for {name}: {meta_resp.text}")
+        try:
+            meta_resp.raise_for_status()
+        except requests.HTTPError:
+            print(f"Failed to submit metadata for {name}: {meta_resp.json()}")
             continue
 
-        meta_data = meta_resp.json()
-        submission_id = meta_data.get("submission_id")
-        if not submission_id:
-            print(f"Missing submission_id for {name}")
-            continue
-
-        poll_headers = {"Authorization": f"Bearer {token}"}
-        poll_url = f"https://thunderstore.io/api/experimental/submission/poll-async/{submission_id}/"
-
-        while True:
-            poll_resp = requests.get(poll_url, headers=poll_headers)
-            if poll_resp.status_code != 200:
-                print(f"Error polling {name}: {poll_resp.text}")
-                break
-            data = poll_resp.json()
-            status = data.get("status")
-            if status in {"Success", "Failed"}:
-                print(f"{name} upload {status}")
-                break
-            time.sleep(5)
+        print(
+            f"Published {metadata['package_name']} {metadata['version_number']}"
+        )
 
 
 def run_upload():
