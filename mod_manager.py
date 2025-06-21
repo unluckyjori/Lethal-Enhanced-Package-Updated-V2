@@ -355,8 +355,8 @@ def replace_version(dep: str, new_version: str) -> str:
 
 def update_manifest_versions(new_version: str) -> None:
     """Update manifest version numbers across all manifests."""
-    for section, folder in SECTION_TO_FOLDER.items():
-        manifest_path = os.path.join(folder, "manifest.json")
+    for section_name, folder_name in SECTION_TO_FOLDER.items():
+        manifest_path = os.path.join(folder_name, "manifest.json")
         if not os.path.isfile(manifest_path):
             continue
 
@@ -365,11 +365,10 @@ def update_manifest_versions(new_version: str) -> None:
 
         data["version_number"] = new_version
 
-        if section == "Main":
-            data["dependencies"] = [
-                replace_version(dep, new_version)
-                for dep in data.get("dependencies", [])
-            ]
+        if section_name == "Main":
+            deps = data.get("dependencies", [])
+            deps = [replace_version(dep, new_version) for dep in deps]
+            data["dependencies"] = deps
 
         with open(manifest_path, "w", encoding="utf-8") as mf:
             json.dump(data, mf, indent=4)
