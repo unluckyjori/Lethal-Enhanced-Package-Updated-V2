@@ -394,13 +394,14 @@ def upload_packages(token: str, packages_dir: str = "packages") -> None:
         headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
         init_url = "https://thunderstore.io/api/experimental/usermedia/initiate-upload/"
         init_resp = requests.post(init_url, headers=headers, json=init_payload)
-        if init_resp.status_code != 200:
+        if not init_resp.ok:
             print(f"Failed to initiate upload for {name}: {init_resp.text}")
             continue
 
         init_data = init_resp.json()
-        upload_uuid = init_data.get("usermedia", {}).get("uuid") or init_data.get("uuid")
-        upload_urls = init_data.get("upload_urls") or init_data.get("usermedia", {}).get("upload_urls", [])
+        user_media = init_data.get("user_media") or init_data.get("usermedia", {})
+        upload_uuid = user_media.get("uuid")
+        upload_urls = init_data.get("upload_urls") or user_media.get("upload_urls", [])
         parts = []
 
         with open(path, "rb") as fh:
