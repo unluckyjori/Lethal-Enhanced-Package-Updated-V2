@@ -389,10 +389,10 @@ def update_main_mod_count(mod_count: int) -> None:
 
     readme_path = os.path.join(folder, "README.md")
     if os.path.isfile(readme_path):
-        with open(readme_path, "r") as rf:
+        with open(readme_path, "r", encoding="utf-8") as rf:
             text = rf.read()
         text = text.replace("over 227", f"over {mod_count}")
-        with open(readme_path, "w") as rf:
+        with open(readme_path, "w", encoding="utf-8") as rf:
             rf.write(text)
 
 
