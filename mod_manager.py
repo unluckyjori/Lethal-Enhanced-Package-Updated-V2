@@ -238,15 +238,20 @@ def zip_folders(output_dir: str = "packages") -> List[str]:
 
 
 def upload_packages(token: str, packages_dir: str = "packages") -> None:
-    headers = {"Authorization": f"Bearer {token}"}
-    upload_url = "https://thunderstore.io/api/experimental/submission/submit-async/"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/zip",
+    }
+    upload_url = (
+        "https://thunderstore.io/api/experimental/submission/submit-async/"
+    )
     for name in os.listdir(packages_dir):
         if not name.lower().endswith(".zip"):
             continue
         path = os.path.join(packages_dir, name)
         with open(path, "rb") as f:
-            files = {"file": (name, f)}
-            response = requests.post(upload_url, headers=headers, files=files)
+            data = f.read()
+        response = requests.post(upload_url, headers=headers, data=data)
         if response.status_code != 200:
             print(f"Failed to upload {name}: {response.text}")
             continue
