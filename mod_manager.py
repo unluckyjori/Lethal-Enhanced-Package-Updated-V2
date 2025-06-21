@@ -612,9 +612,8 @@ def menu():
         "4: Remove mod\n"
         "5: Upload\n"
         "6: Settings\n"
-        "7: All\n"
-        "8: Update version info\n"
-        "9: Exit\n\n"
+        "7: Prepare and publish\n"
+        "8: Exit\n\n"
     )
     while True:
         choice = input(prompt).strip()
@@ -634,8 +633,6 @@ def menu():
         elif choice == "7":
             run_all()
         elif choice == "8":
-            update_version_info()
-        elif choice == "9":
             print("Exiting...")
             break
         else:
