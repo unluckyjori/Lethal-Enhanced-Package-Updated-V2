@@ -1,0 +1,12 @@
+{
+    "name": "Lethal_Enhanced_Party_Edition",
+    "version_number": "10.0.4",
+    "website_url": "https://discord.gg/T8kKndBhS5",
+    "description": "[LC v72] Experience one of the best High Quality modpacks out there! Dive into 227 carefully chosen mods, containing moons, interiors, cosmetics, and gameplay/performance improvements. (CHECK README)",
+    "dependencies": [
+        "lethal_coder-Lethal_Enhanced_Party_Edition_EXTRA-10.0.4",
+        "lethal_coder-Lethal_Enhanced_Party_Edition_CORE-10.0.4",
+        "lethal_coder-Lethal_Enhanced_Party_Edition_COSMOS-10.0.4",
+        "lethal_coder-Lethal_Enhanced_Party_Edition_COSMETICS-10.0.4"
+    ]
+}
