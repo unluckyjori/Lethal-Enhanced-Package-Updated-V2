@@ -345,20 +345,14 @@ def settings_menu():
             print("Invalid choice, try again.\n")
 
 
-def replace_version(dep: str, new_version: str) -> str:
-    """Replace the version part of a dependency string if possible."""
-    if dep.count("-") < 2:
-        return dep
-    prefix, _ = dep.rsplit("-", 1)
-    return f"{prefix}-{new_version}"
+def bump_dependency(dep: str, new_version: str) -> str:
+    """Update only the version segment of a dependency string."""
+    m = re.match(r"^(.+?)-(.+)-(\d+\.\d+\.\d+)$", dep)
+    return f"{m.group(1)}-{m.group(2)}-{new_version}" if m else dep
 
 
 def update_manifest_versions(new_version: str) -> None:
     """Update manifest version numbers across all manifests."""
-    import os, json, re
-
-    pattern = re.compile(r"^(.+?)-(\d+\.\d+\.\d+)$")
-
     for section_name, folder_name in SECTION_TO_FOLDER.items():
         manifest_path = os.path.join(folder_name, "manifest.json")
         if not os.path.isfile(manifest_path):
@@ -368,11 +362,11 @@ def update_manifest_versions(new_version: str) -> None:
             data = json.load(mf)
 
         data["version_number"] = new_version
-
         if section_name == "Main":
-            deps = data.get("dependencies", [])
-            deps = [pattern.sub(r"\1-" + new_version, dep) for dep in deps]
-            data["dependencies"] = deps
+            data["dependencies"] = [
+                bump_dependency(dep, new_version)
+                for dep in data.get("dependencies", [])
+            ]
 
         with open(manifest_path, "w", encoding="utf-8") as mf:
             json.dump(data, mf, indent=4)
