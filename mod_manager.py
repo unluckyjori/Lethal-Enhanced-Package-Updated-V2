@@ -3,6 +3,7 @@ import os
 import subprocess
 import sys
 import time
+import zipfile
 from typing import Dict, List
 
 import requests
@@ -162,11 +163,164 @@ def run_update_mods():
     except ValueError:
         delay = 0
     update_all_packages(delay, PACKAGE_LIST_FILE)
+    print()
 
 
 def distribute_lists():
     packages = parse_updated_package_list()
     update_dependencies(packages)
+    print()
+
+
+def load_settings(path: str = "settings.json") -> Dict[str, str]:
+    if os.path.isfile(path):
+        with open(path, "r") as f:
+            try:
+                return json.load(f)
+            except json.JSONDecodeError:
+                pass
+    return {}
+
+
+def save_settings(settings: Dict[str, str], path: str = "settings.json") -> None:
+    with open(path, "w") as f:
+        json.dump(settings, f, indent=4)
+        f.write("\n")
+
+
+def settings_menu():
+    prompt = (
+        "Settings:\n"
+        "1: Modify token\n"
+        "2: Back\n\n"
+    )
+    while True:
+        choice = input(prompt).strip()
+        print()
+        if choice == "1":
+            token = input("Enter API token: ").strip()
+            settings = load_settings()
+            settings["token"] = token
+            save_settings(settings)
+            print("Token saved.\n")
+        elif choice == "2":
+            break
+        else:
+            print("Invalid choice, try again.\n")
+
+
+def update_manifest_versions(new_version: str) -> None:
+    for folder in SECTION_TO_FOLDER.values():
+        manifest_path = os.path.join(folder, "manifest.json")
+        if not os.path.isfile(manifest_path):
+            continue
+        with open(manifest_path, "r") as mf:
+            data = json.load(mf)
+        data["version_number"] = new_version
+        with open(manifest_path, "w") as mf:
+            json.dump(data, mf, indent=4)
+            mf.write("\n")
+
+
+def zip_folders(output_dir: str = "packages") -> List[str]:
+    os.makedirs(output_dir, exist_ok=True)
+    zipped = []
+    for folder in SECTION_TO_FOLDER.values():
+        zip_path = os.path.join(output_dir, f"{folder}.zip")
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+            for root, _, files in os.walk(folder):
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    arcname = os.path.relpath(file_path, folder)
+                    zf.write(file_path, arcname)
+        zipped.append(zip_path)
+    return zipped
+
+
+def upload_packages(token: str, packages_dir: str = "packages") -> None:
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/zip",
+    }
+    upload_url = "https://thunderstore.io/api/experimental/submission/submit-async/"
+    for name in os.listdir(packages_dir):
+        if not name.lower().endswith(".zip"):
+            continue
+        path = os.path.join(packages_dir, name)
+        with open(path, "rb") as f:
+            data = f.read()
+            response = requests.post(upload_url, headers=headers, data=data)
+        if response.status_code != 200:
+            print(f"Failed to upload {name}: {response.text}")
+            continue
+        submission_id = response.json().get("submission_id")
+        if not submission_id:
+            print(f"No submission id for {name}")
+            continue
+        poll_url = (
+            f"https://thunderstore.io/api/experimental/submission/poll-async/{submission_id}/"
+        )
+        while True:
+            poll_resp = requests.get(poll_url, headers=headers)
+            if poll_resp.status_code != 200:
+                print(f"Error polling {name}: {poll_resp.text}")
+                break
+            data = poll_resp.json()
+            status = data.get("status")
+            if status in {"Success", "Failed"}:
+                print(f"{name} upload {status}")
+                break
+            time.sleep(5)
+
+
+def run_upload():
+    new_version = input("Enter new version number: ").strip()
+    print()
+    if not new_version:
+        print("No version provided.\n")
+        return
+    update_manifest_versions(new_version)
+    zip_folders()
+    settings = load_settings()
+    token = settings.get("token") or os.environ.get("THUNDERSTORE_TOKEN")
+    if not token:
+        print(
+            "API token not found. Set it via settings or THUNDERSTORE_TOKEN env variable.\n"
+        )
+        return
+    confirm = input("Proceed with upload? (y/n): ").strip().lower()
+    print()
+    if confirm != "y":
+        print("Upload cancelled.\n")
+        return
+    upload_packages(token)
+    print()
+
+
+def run_all():
+    run_update_mods()
+    distribute_lists()
+    new_version = input("Enter new version number: ").strip()
+    print()
+    if not new_version:
+        print("No version provided.\n")
+        return
+    update_manifest_versions(new_version)
+    zip_folders()
+    settings = load_settings()
+    token = settings.get("token") or os.environ.get("THUNDERSTORE_TOKEN")
+    if not token:
+        print(
+            "API token not found. Set it via settings or THUNDERSTORE_TOKEN env variable.\n"
+        )
+        return
+    confirm = input("Proceed with upload? (y/n): ").strip().lower()
+    print()
+    if confirm != "y":
+        print("Upload cancelled.\n")
+        return
+    upload_packages(token)
+    print()
 
 
 def menu():
@@ -174,19 +328,25 @@ def menu():
         "What action do you want to perform?\n"
         "1: Update mods\n"
         "2: Distribute the list to each folder\n"
-        "3: Both\n"
-        "4: Exit\n"
+        "3: Upload\n"
+        "4: Settings\n"
+        "5: All\n"
+        "6: Exit\n\n"
     )
     while True:
         choice = input(prompt).strip()
+        print()
         if choice == "1":
             run_update_mods()
         elif choice == "2":
             distribute_lists()
         elif choice == "3":
-            run_update_mods()
-            distribute_lists()
+            run_upload()
         elif choice == "4":
+            settings_menu()
+        elif choice == "5":
+            run_all()
+        elif choice == "6":
             print("Exiting...")
             break
         else:
