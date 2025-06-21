@@ -239,9 +239,6 @@ def zip_folders(output_dir: str = "packages") -> List[str]:
 
 
 def upload_packages(token: str, packages_dir: str = "packages") -> None:
-    settings = load_settings()
-    folder_to_section = {v: k for k, v in SECTION_TO_FOLDER.items()}
-
     submit_url = (
         "https://thunderstore.io/api/experimental/submission/submit-async/"
     )
@@ -251,13 +248,12 @@ def upload_packages(token: str, packages_dir: str = "packages") -> None:
             continue
 
         path = os.path.join(packages_dir, name)
-        category = folder_to_section.get(os.path.splitext(name)[0])
         metadata = {
-            "author_name": settings.get("author_name"),
-            "categories": [category] if category else [],
-            "communities": [settings.get("community_slug")] if settings.get("community_slug") else [],
-            "has_nsfw_content": False,
             "upload_uuid": str(uuid.uuid4()),
+            "author_name": "lethal_coder",
+            "categories": ["Modpacks"],
+            "communities": ["Lethal Company"],
+            "has_nsfw_content": False,
         }
 
         meta_headers = {
