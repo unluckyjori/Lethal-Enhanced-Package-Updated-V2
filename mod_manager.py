@@ -400,6 +400,26 @@ def update_main_mod_count(mod_count: int) -> None:
             rf.write(text)
 
 
+def update_version_info() -> None:
+    """Prompt for version and mod count then update manifests."""
+    new_version = input("Enter new version number: ").strip()
+    print()
+    if not new_version:
+        print("No version provided.\n")
+        return
+    update_manifest_versions(new_version)
+
+    mod_count_str = input("Enter total mod count: ").strip()
+    print()
+    try:
+        mod_count = int(mod_count_str)
+    except ValueError:
+        print("Invalid mod count.\n")
+        return
+    update_main_mod_count(mod_count)
+    print("Version information updated.\n")
+
+
 def zip_folders(output_dir: str = "packages") -> List[str]:
     os.makedirs(output_dir, exist_ok=True)
     zipped = []
@@ -594,7 +614,8 @@ def menu():
         "5: Upload\n"
         "6: Settings\n"
         "7: All\n"
-        "8: Exit\n\n"
+        "8: Update version info\n"
+        "9: Exit\n\n"
     )
     while True:
         choice = input(prompt).strip()
@@ -614,6 +635,8 @@ def menu():
         elif choice == "7":
             run_all()
         elif choice == "8":
+            update_version_info()
+        elif choice == "9":
             print("Exiting...")
             break
         else:
