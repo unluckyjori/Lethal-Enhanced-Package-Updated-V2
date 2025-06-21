@@ -116,12 +116,16 @@ def print_package_update_status(pkg: ThunderStorePackage, previous_version: str)
 
 def update_all_packages(delay: int = 0, path: str = PACKAGE_LIST_FILE) -> None:
     sections_map = parse_package_list_for_update(path)
+    first_section = True
     for section, packages in sections_map.items():
+        if not first_section:
+            print()
         print(f"Updating packages in section: {section}")
         for pkg in packages:
             prev_version = pkg.version
             update_package_version(pkg, delay)
             print_package_update_status(pkg, prev_version)
+        first_section = False
     write_packages_to_file(sections_map, path)
 
 
