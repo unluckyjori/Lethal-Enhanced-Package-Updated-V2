@@ -382,7 +382,8 @@ def update_main_mod_count(mod_count: int) -> None:
         with open(manifest_path, "r", encoding="utf-8") as mf:
             data = json.load(mf)
         desc = data.get("description", "")
-        desc = re.sub(r"\b227\b", str(mod_count), desc)
+        # replace the last integer in the description with the new mod count
+        desc = re.sub(r"(\d+)(?=[^\d]*$)", str(mod_count), desc)
         data["description"] = desc
         with open(manifest_path, "w", encoding="utf-8") as mf:
             json.dump(data, mf, indent=4)
@@ -392,7 +393,8 @@ def update_main_mod_count(mod_count: int) -> None:
     if os.path.isfile(readme_path):
         with open(readme_path, "r", encoding="utf-8") as rf:
             text = rf.read()
-        text = text.replace("over 227", f"over {mod_count}")
+        # update the "over <number>" phrase with the new mod count
+        text = re.sub(r"over \d+", f"over {mod_count}", text)
         with open(readme_path, "w", encoding="utf-8") as rf:
             rf.write(text)
 
