@@ -5,7 +5,7 @@ import sys
 import time
 import uuid
 import zipfile
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import requests
 from packaging import version
@@ -33,6 +33,16 @@ class ThunderStorePackage:
             f"ThunderStorePackage(namespace={self.namespace}, "
             f"name={self.name}, version={self.version})"
         )
+
+
+def parse_mod_string(mod_str: str) -> Optional[ThunderStorePackage]:
+    mod_str = mod_str.strip().strip('"')
+    parts = mod_str.split("-")
+    if len(parts) < 3:
+        return None
+    namespace, name = parts[0], parts[1]
+    version_str = "-".join(parts[2:])
+    return ThunderStorePackage(namespace, name, version_str)
 
 
 def parse_package_list_for_update(path: str = PACKAGE_LIST_FILE) -> Dict[str, List[ThunderStorePackage]]:
@@ -159,10 +169,11 @@ def update_dependencies(section_packages):
 
 
 def run_update_mods():
+    settings = load_settings()
     try:
-        delay = int(input("Delay between server requests in seconds (0 for none): ").strip() or "0")
-    except ValueError:
-        delay = 0
+        delay = int(settings.get("server_delay", 1))
+    except (ValueError, TypeError):
+        delay = 1
     update_all_packages(delay, PACKAGE_LIST_FILE)
     print()
 
@@ -171,6 +182,47 @@ def distribute_lists():
     packages = parse_updated_package_list()
     update_dependencies(packages)
     print()
+
+
+def add_mod() -> None:
+    mod_str = input(
+        "Enter full mod string (e.g. ScienceBird-Universal_Radar-1.0.6): "
+    ).strip()
+    if not mod_str:
+        print("No mod provided.\n")
+        return
+    section_input = input(
+        "Section (core/cosmos/cosmetic/extra): "
+    ).strip().lower()
+    section = SECTION_ALIASES.get(section_input)
+    if not section:
+        print("Invalid section.\n")
+        return
+
+    pkg_obj = parse_mod_string(mod_str)
+    if pkg_obj is None:
+        print("Invalid mod string format.\n")
+        return
+
+    sections_map = parse_package_list_for_update(PACKAGE_LIST_FILE)
+    sections_map.setdefault(section, [])
+    sections_map[section].append(pkg_obj)
+    write_packages_to_file(sections_map, PACKAGE_LIST_FILE)
+
+    folder = SECTION_TO_FOLDER.get(section)
+    manifest_path = os.path.join(folder, "manifest.json")
+    if os.path.isfile(manifest_path):
+        with open(manifest_path, "r") as mf:
+            data = json.load(mf)
+        deps = data.get("dependencies", [])
+        deps.append(mod_str)
+        data["dependencies"] = deps
+        with open(manifest_path, "w") as mf:
+            json.dump(data, mf, indent=4)
+            mf.write("\n")
+        print(f"Added {mod_str} to {manifest_path}\n")
+    else:
+        print(f"Manifest not found for section {section}.\n")
 
 
 def load_settings(path: str = "settings.json") -> Dict[str, str]:
@@ -193,7 +245,8 @@ def settings_menu():
     prompt = (
         "Settings:\n"
         "1: Modify token\n"
-        "2: Back\n\n"
+        "2: Modify server delay\n"
+        "3: Back\n\n"
     )
     while True:
         choice = input(prompt).strip()
@@ -205,6 +258,16 @@ def settings_menu():
             save_settings(settings)
             print("Token saved.\n")
         elif choice == "2":
+            try:
+                delay = int(input("Enter server delay in seconds: ").strip())
+            except ValueError:
+                print("Invalid delay.\n")
+                continue
+            settings = load_settings()
+            settings["server_delay"] = delay
+            save_settings(settings)
+            print("Server delay saved.\n")
+        elif choice == "3":
             break
         else:
             print("Invalid choice, try again.\n")
@@ -359,11 +422,12 @@ def menu():
     prompt = (
         "What action do you want to perform?\n"
         "1: Update mods\n"
-        "2: Distribute the list to each folder\n"
-        "3: Upload\n"
-        "4: Settings\n"
-        "5: All\n"
-        "6: Exit\n\n"
+        "2: Distribute\n"
+        "3: Add mod\n"
+        "4: Upload\n"
+        "5: Settings\n"
+        "6: All\n"
+        "7: Exit\n\n"
     )
     while True:
         choice = input(prompt).strip()
@@ -373,12 +437,14 @@ def menu():
         elif choice == "2":
             distribute_lists()
         elif choice == "3":
-            run_upload()
+            add_mod()
         elif choice == "4":
-            settings_menu()
+            run_upload()
         elif choice == "5":
-            run_all()
+            settings_menu()
         elif choice == "6":
+            run_all()
+        elif choice == "7":
             print("Exiting...")
             break
         else:
