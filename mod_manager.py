@@ -390,7 +390,8 @@ def upload_packages(token: str, packages_dir: str = "packages") -> None:
         summary = readme.splitlines()[0] if readme else manifest.get("description", "")
 
         file_size = os.path.getsize(path)
-        init_payload = {"filename": name, "file_size_bytes": file_size}
+        file_uuid = str(uuid.uuid4())
+        init_payload = {"filename": name, "file_size_bytes": file_size, "uuid": file_uuid}
         headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
         init_url = "https://thunderstore.io/api/experimental/usermedia/initiate-upload/"
         init_resp = requests.post(init_url, headers=headers, json=init_payload)
@@ -400,7 +401,7 @@ def upload_packages(token: str, packages_dir: str = "packages") -> None:
 
         init_data = init_resp.json()
         user_media = init_data.get("user_media") or init_data.get("usermedia", {})
-        upload_uuid = user_media.get("uuid")
+        file_uuid = user_media.get("uuid")
         upload_urls = init_data.get("upload_urls") or user_media.get("upload_urls", [])
         parts = []
 
@@ -423,7 +424,7 @@ def upload_packages(token: str, packages_dir: str = "packages") -> None:
                     break
                 parts.append({"ETag": etag, "PartNumber": part_num})
 
-        finish_url = f"https://thunderstore.io/api/experimental/usermedia/{upload_uuid}/finish-upload/"
+        finish_url = f"https://thunderstore.io/api/experimental/usermedia/{file_uuid}/finish-upload/"
         finish_payload = {"parts": parts}
         finish_resp = requests.post(finish_url, headers=headers, json=finish_payload)
         if finish_resp.status_code != 200:
@@ -431,7 +432,7 @@ def upload_packages(token: str, packages_dir: str = "packages") -> None:
             continue
 
         metadata = {
-            "upload_uuid": upload_uuid,
+            "upload_uuid": file_uuid,
             "author_name": "lethal_coder",
             "communities": ["lethal-company"],
             "community_categories": {"lethal-company": ["modpacks"]},
