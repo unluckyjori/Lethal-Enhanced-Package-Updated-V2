@@ -1,4 +1,4 @@
-# Thunderstore package updator
+# Thunderstore package updater
 
 ## Purpose of this script
 This script obtains the latest versions of a Thunderstore package list you provide.
