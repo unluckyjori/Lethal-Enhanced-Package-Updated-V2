@@ -3,6 +3,7 @@ import os
 import subprocess
 import sys
 import time
+import uuid
 import zipfile
 from typing import Dict, List
 
@@ -238,9 +239,10 @@ def zip_folders(output_dir: str = "packages") -> List[str]:
 
 
 def upload_packages(token: str, packages_dir: str = "packages") -> None:
+    settings = load_settings()
+    folder_to_section = {v: k for k, v in SECTION_TO_FOLDER.items()}
     headers = {
         "Authorization": f"Bearer {token}",
-        "Content-Type": "application/zip",
     }
     upload_url = (
         "https://thunderstore.io/api/experimental/submission/submit-async/"
@@ -249,9 +251,20 @@ def upload_packages(token: str, packages_dir: str = "packages") -> None:
         if not name.lower().endswith(".zip"):
             continue
         path = os.path.join(packages_dir, name)
+        category = folder_to_section.get(os.path.splitext(name)[0])
+        metadata = {
+            "author_name": settings.get("author_name"),
+            "categories": [category] if category else [],
+            "communities": [settings.get("community_slug")] if settings.get("community_slug") else [],
+            "has_nsfw_content": False,
+            "upload_uuid": str(uuid.uuid4()),
+        }
         with open(path, "rb") as f:
-            data = f.read()
-        response = requests.post(upload_url, headers=headers, data=data)
+            files = {
+                "data": ("metadata.json", json.dumps(metadata), "application/json"),
+                "file": (name, f, "application/zip"),
+            }
+            response = requests.post(upload_url, headers=headers, files=files)
         if response.status_code != 200:
             print(f"Failed to upload {name}: {response.text}")
             continue
