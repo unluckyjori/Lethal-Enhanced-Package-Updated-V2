@@ -345,6 +345,14 @@ def settings_menu():
             print("Invalid choice, try again.\n")
 
 
+def replace_version(dep: str, new_version: str) -> str:
+    """Replace the version part of a dependency string if possible."""
+    if dep.count("-") < 2:
+        return dep
+    prefix, _ = dep.rsplit("-", 1)
+    return f"{prefix}-{new_version}"
+
+
 def update_manifest_versions(new_version: str) -> None:
     for folder in SECTION_TO_FOLDER.values():
         manifest_path = os.path.join(folder, "manifest.json")
@@ -358,11 +366,8 @@ def update_manifest_versions(new_version: str) -> None:
         deps = data.get("dependencies", [])
         new_deps = []
         for dep in deps:
-            if dep.lower().startswith(
-                "lethal_coder-lethal_enhanced_party_edition"
-            ):
-                prefix, _ = dep.rsplit("-", 1)
-                new_deps.append(f"{prefix}-{new_version}")
+            if "lethal_enhanced_party_edition" in dep.lower():
+                new_deps.append(replace_version(dep, new_version))
             else:
                 new_deps.append(dep)
         data["dependencies"] = new_deps
