@@ -23,6 +23,9 @@ SECTION_TO_FOLDER = {
     "Main": "main",
 }
 
+# Desired order for uploading packaged zips
+UPLOAD_ORDER = ["extra", "core", "cosmos", "cosmetic", "main"]
+
 SECTION_ALIASES = {k.lower(): k for k in SECTION_TO_FOLDER}
 
 
@@ -437,11 +440,11 @@ def zip_folders(output_dir: str = "packages") -> List[str]:
 def upload_packages(token: str, packages_dir: str = "packages") -> None:
     meta_url = "https://thunderstore.io/api/experimental/submission/submit/"
 
-    for name in os.listdir(packages_dir):
-        if not name.lower().endswith(".zip"):
-            continue
-
+    for folder in UPLOAD_ORDER:
+        name = f"{folder}.zip"
         path = os.path.join(packages_dir, name)
+        if not os.path.isfile(path):
+            continue
 
         with zipfile.ZipFile(path, "r") as zf:
             with zf.open("manifest.json") as mf:
